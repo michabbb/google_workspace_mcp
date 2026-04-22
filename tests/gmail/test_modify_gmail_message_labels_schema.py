@@ -17,6 +17,7 @@ def _assert_optional_string_array_anyof(field_schema):
     assert field_schema["default"] is None
 
     branches = field_schema["anyOf"]
+    assert len(branches) == 2
     assert {"type": "array", "items": {"type": "string"}} in branches
     assert {"type": "null"} in branches
 
