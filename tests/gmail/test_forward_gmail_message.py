@@ -485,3 +485,26 @@ async def test_forward_with_cc_bcc():
     assert sent["To"] == "recipient@example.com"
     assert sent["Cc"] == "cc@example.com"
     assert sent["Bcc"] == "bcc@example.com"
+
+
+@pytest.mark.asyncio
+async def test_forward_subject_override():
+    """An explicit subject overrides the auto-derived 'Fwd:' subject."""
+    message = create_mock_message(
+        subject="Original",
+        from_addr="alice@example.com",
+        to_addr="bob@example.com",
+        text_body="Body.",
+    )
+    mock_service = create_mock_service(message, sent_message_id="fwd012")
+
+    await _forward_gmail_message_impl(
+        service=mock_service,
+        message_id="msgyz",
+        to="recipient@example.com",
+        subject="Custom Subject",
+        user_google_email="me@example.com",
+    )
+
+    sent = get_sent_mime_message(mock_service)
+    assert sent["Subject"] == "Custom Subject"
