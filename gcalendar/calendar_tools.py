@@ -609,7 +609,6 @@ _CONFERENCE_SOLUTION_NAMES = {
     "webex": "Webex",
     "teams": "Microsoft Teams",
     "microsoft teams": "Microsoft Teams",
-    "meet": "Google Meet",
 }
 
 
@@ -625,7 +624,9 @@ def _build_addon_conference_data(
     ``conferenceSolution.key.type = "addOn"`` mechanism rather than the native
     ``hangoutsMeet`` create request.
     """
-    name = _CONFERENCE_SOLUTION_NAMES.get(provider.strip().lower(), provider)
+    provider = provider.strip()
+    uri = uri.strip()
+    name = _CONFERENCE_SOLUTION_NAMES.get(provider.lower(), provider)
     entry_point: Dict[str, Any] = {
         "entryPointType": "video",
         "uri": uri,
@@ -669,13 +670,15 @@ def _resolve_conference_data(
 
     resolved = conference_data
     if helper_used:
-        if not (conference_provider and conference_uri):
+        provider = (conference_provider or "").strip()
+        uri = (conference_uri or "").strip()
+        if not (provider and uri):
             raise ValueError(
                 "conference_provider and conference_uri are both required to "
                 "attach a third-party conference."
             )
         resolved = _build_addon_conference_data(
-            conference_provider, conference_uri, conference_passcode, conference_id
+            provider, uri, conference_passcode, conference_id
         )
 
     if resolved is not None and add_google_meet:
@@ -684,18 +687,6 @@ def _resolve_conference_data(
             "same event; choose one."
         )
     return resolved
-
-
-def _extract_conference_video_uri(event: Dict[str, Any]) -> str:
-    """Return the video entry-point URI from an event's conferenceData, if any."""
-    conference_data = event.get("conferenceData")
-    if conference_data and "entryPoints" in conference_data:
-        for entry_point in conference_data["entryPoints"]:
-            if entry_point.get("entryPointType") == "video":
-                uri = entry_point.get("uri", "")
-                if uri:
-                    return uri
-    return ""
 
 
 async def _create_event_impl(
@@ -929,7 +920,7 @@ async def _create_event_impl(
 
     # Surface the conferencing link (native Meet or third-party add-on) if present
     if add_google_meet or conference_data is not None:
-        meeting_link = _extract_conference_video_uri(created_event)
+        meeting_link = _get_meeting_link(created_event)
         if meeting_link:
             label = "Google Meet" if add_google_meet else "Conference"
             confirmation_message += f" {label}: {meeting_link}"
@@ -1207,11 +1198,11 @@ async def _modify_event_impl(
 
     # Surface the conferencing link (native Meet or third-party add-on) if present
     if conference_data is not None:
-        meeting_link = _extract_conference_video_uri(updated_event)
+        meeting_link = _get_meeting_link(updated_event)
         if meeting_link:
             confirmation_message += f" Conference: {meeting_link}"
     elif add_google_meet is True:
-        meeting_link = _extract_conference_video_uri(updated_event)
+        meeting_link = _get_meeting_link(updated_event)
         if meeting_link:
             confirmation_message += f" Google Meet: {meeting_link}"
     elif add_google_meet is False:
@@ -1408,7 +1399,7 @@ async def manage_event(
             payload to attach a third-party conference (Zoom/Webex/Teams add-on). Use this
             for full control; mutually exclusive with the conference_provider helper params
             and with add_google_meet. (create/update only)
-        conference_provider (Optional[str]): Higher-level helper — third-party provider name
+        conference_provider (Optional[str]): Higher-level helper: third-party provider name
             (e.g. "zoom", "webex", "teams"). Requires conference_uri. The MCP builds the
             addOn `conferenceData` block internally. (create/update only)
         conference_uri (Optional[str]): Join URL for the third-party conference (e.g.

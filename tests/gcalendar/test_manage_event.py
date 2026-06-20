@@ -152,7 +152,7 @@ async def test_modify_event_removes_google_meet_with_null_conference_data():
 
 def test_build_addon_conference_data_maps_known_provider():
     data = _build_addon_conference_data(
-        "zoom", "https://zoom.us/j/123", passcode="abc", conference_id="123"
+        " Zoom ", " https://zoom.us/j/123 ", passcode="abc", conference_id="123"
     )
     assert data["conferenceSolution"]["key"]["type"] == "addOn"
     assert data["conferenceSolution"]["name"] == "Zoom Meeting"
